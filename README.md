@@ -7,3 +7,7 @@ Requirments: needs Google Test and Google snappy libraries to run.
 How to compile the test code:
 
 g++ -o Datatypetest -I{Google Test include folder path} -L{path to Google Test compiled library} -L{path to libcouchbase compiled library} -L{path to libcouchbase compiled library} -lcouchbase -lsnappy -lgtest DataTypeTests.cc
+
+Usage:
+
+./Datatypetest --gtest_output="xml" localhost:9000 bucket_2 password
