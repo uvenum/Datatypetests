@@ -109,7 +109,8 @@ protected:
 };
 
 TEST_F(WarmupTest, InsertItemsTest) {
-tmo = 350000000;
+
+/*tmo = 350000000;
 lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmo);
 FILE *file20MB;
 char *membuffer;
@@ -117,13 +118,16 @@ long numbytes;
 file20MB = fopen("out20M.dat","r");
 fseek(file20MB,0L,SEEK_END);
 numbytes=ftell(file20MB);
+fprintf(stderr, "\nnumbytes %ld\n",numbytes); 
 fseek(file20MB,0L,SEEK_SET);
 membuffer = (char*)calloc(numbytes,sizeof(char));
 if(membuffer==NULL) exit(EXIT_FAILURE);
 fread(membuffer, sizeof(char),numbytes,file20MB);
-fclose(file20MB);
+fclose(file20MB);*/
+const char inflated[] = "abc123";
+size_t inflated_len = strlen(inflated);
 
-for(int i = 101; i<100;i++){
+for(uint64_t  i = 1; i<std::numeric_limits<uint64_t>::max() ;i++){
   lcb_store_cmd_t cmd;
   char buf[20];
   const lcb_store_cmd_t *commands[1];
@@ -132,10 +136,10 @@ for(int i = 101; i<100;i++){
   cmd.v.v0.operation = LCB_SET;
   cmd.v.v0.datatype = LCB_BINARY_RAW_BYTES;
   std::stringstream ss;
-  ss << myInt;
-  string myString = ss.str();
-  cmd.v.v0.key = ss;
-  cmd.v.v0.nkey = strlen(ss);
+  ss << i;
+  std::string myString = ss.str();
+  cmd.v.v0.key = myString.c_str();
+  cmd.v.v0.nkey = myString.size();
   cmd.v.v0.bytes = inflated;
   cmd.v.v0.nbytes = inflated_len;
   lcb_store(instance, NULL, 1, &commands[0]);  
@@ -144,6 +148,20 @@ for(int i = 101; i<100;i++){
 }
 
 TEST_F(WarmupTest, WarmupStatsTest) {
+const char inflated[] = "abc123";
+size_t inflated_len = strlen(inflated);
+lcb_store_cmd_t cmd;
+const lcb_store_cmd_t *commands[1];
+commands[0] = &cmd;
+memset(&cmd, 0, sizeof(cmd));
+cmd.v.v0.operation = LCB_SET;
+cmd.v.v0.datatype = LCB_BINARY_RAW_BYTES;
+cmd.v.v0.key = "fooaaa";
+cmd.v.v0.nkey = 6;
+cmd.v.v0.bytes = inflated;
+cmd.v.v0.nbytes = inflated_len;
+lcb_store(instance, NULL, 1, &commands[0]);  
+lcb_wait(instance);
 
 lcb_server_stats_cmd_t stats;
 stats.version = 0;
