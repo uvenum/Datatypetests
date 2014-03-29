@@ -40,13 +40,19 @@
 #endif
 
 char* getvaluebuf;
+char* statkeybuf;
+char* statvaluebuf;
+lcb_size_t* statkeysize;
+lcb_size_t* statvaluesize;
 long* getvaluesize;
+lcb_datatype_t* getvaluedtype;
+bool warmupdone =  false;
 
 static void error_callback(lcb_t instance, lcb_error_t error, const char *errinfo)
 {
     fprintf(stderr, "ERROR: %s (0x%x), %s\n",
             lcb_strerror(instance, error), error, errinfo);
-    exit(EXIT_FAILURE);
+    //exit(EXIT_FAILURE);
 }
 
 static void store_callback(lcb_t instance, const void *cookie,
@@ -73,8 +79,10 @@ static void get_callback(lcb_t instance, const void *cookie, lcb_error_t error,
     if (error == LCB_SUCCESS) {
         
         getvaluesize = (long *) calloc(1,sizeof(long));
+        getvaluedtype = (lcb_datatype_t*) calloc(1,sizeof(lcb_datatype_t));
         getvaluebuf = (char *)item->v.v0.bytes;
         *getvaluesize = (long)item->v.v0.nbytes;
+        *getvaluedtype = item->v.v0.datatype;  
         
         fprintf(stderr, "GOT size of doc: %ld \n",(long)item->v.v0.nbytes);
         fwrite(item->v.v0.key, sizeof(char), item->v.v0.nkey, stderr);
@@ -97,6 +105,31 @@ static void get_callback(lcb_t instance, const void *cookie, lcb_error_t error,
     }
     (void)cookie;
 }
+
+static void stats_callback(lcb_t instance, const void *cookie, lcb_error_t error,
+                         const lcb_server_stat_resp_t *resp)
+{
+    if (error == LCB_SUCCESS) {
+       
+        //check if ep_warmup_state is done and mark bool variable warmupdone
+        if(resp->v.v0.nkey == 15){
+           if(resp->v.v0.nbytes ==4 ){
+              warmupdone = true;     
+           }
+        }
+ 
+        fprintf(stderr, "\n");
+        fprintf(stderr, "key size : %lu \n",resp->v.v0.nkey);
+        fwrite(resp->v.v0.key, sizeof(char), resp->v.v0.nkey, stderr);
+        fprintf(stderr, ": ");
+        fwrite(resp->v.v0.bytes, sizeof(char), resp->v.v0.nbytes, stderr);
+} else {
+        fprintf(stderr, "GET ERROR: %s (0x%x)\n",
+                lcb_strerror(instance, error), error);
+    }
+    (void) cookie;
+}
+
 int callget(lcb_t* instance,const void* gkey, size_t gnkey){
     lcb_wait(*instance);
     {
