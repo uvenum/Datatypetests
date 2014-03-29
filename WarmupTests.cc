@@ -14,6 +14,7 @@
 
 extern char *getvaluebuf;
 extern long *getvaluesize;
+extern bool warmupdone;
 char **testargv;
 char testargc;
 
@@ -89,18 +90,19 @@ protected:
        } 
    }
    
-  void DatatypeTester(const lcb_store_cmd_t *commands) {
-  lcb_wait(instance);
+
+   void DatatypeTester(const lcb_store_cmd_t *commands) {
+   lcb_wait(instance);
    {
    err = lcb_store(instance, NULL, 1, &commands);
    assert(err==LCB_SUCCESS);
    }
-  lcb_wait(instance);
-  callget(&instance, commands->v.v0.key, commands->v.v0.nkey);   
-  lcb_wait(instance);
-  fprintf(stderr, "\nInside DatatypeTester\n"); 
-  compareDocs(commands);
-  }
+   lcb_wait(instance);
+   callget(&instance, commands->v.v0.key, commands->v.v0.nkey);   
+   lcb_wait(instance);
+   fprintf(stderr, "\nInside DatatypeTester\n"); 
+   compareDocs(commands);
+   }
   lcb_uint32_t tmo;
   const lcb_store_cmd_t *commands[1];
   lcb_error_t err;
@@ -146,20 +148,19 @@ for(uint64_t  i = 1; i<std::numeric_limits<uint64_t>::max() ;i++){
   lcb_wait(instance);
   }
 }
-
+/*
 TEST_F(WarmupTest, WarmupStatsTest) {
-const char inflated[] = "abc123";
-size_t inflated_len = strlen(inflated);
+const char dummy = 'a';
 lcb_store_cmd_t cmd;
 const lcb_store_cmd_t *commands[1];
 commands[0] = &cmd;
 memset(&cmd, 0, sizeof(cmd));
 cmd.v.v0.operation = LCB_SET;
 cmd.v.v0.datatype = LCB_BINARY_RAW_BYTES;
-cmd.v.v0.key = "fooaaa";
-cmd.v.v0.nkey = 6;
-cmd.v.v0.bytes = inflated;
-cmd.v.v0.nbytes = inflated_len;
+cmd.v.v0.key = "1";
+cmd.v.v0.nkey = 1;
+cmd.v.v0.bytes = &dummy;
+cmd.v.v0.nbytes = 1;
 lcb_store(instance, NULL, 1, &commands[0]);  
 lcb_wait(instance);
 
@@ -172,7 +173,37 @@ commandstat[0] = &stats;
 lcb_server_stats(instance,NULL,1, &commandstat[0]);
 lcb_wait(instance);
 
+}*/
+
+TEST_F(WarmupTest, ep_warmup_stateTest) {
+
+const char dummy = 'a';
+lcb_store_cmd_t cmd;
+const lcb_store_cmd_t *commands[1];
+commands[0] = &cmd;
+memset(&cmd, 0, sizeof(cmd));
+cmd.v.v0.operation = LCB_SET;
+cmd.v.v0.datatype = LCB_BINARY_RAW_BYTES;
+cmd.v.v0.key = "1";
+cmd.v.v0.nkey = 1;
+cmd.v.v0.bytes = &dummy;
+cmd.v.v0.nbytes = 1;
+lcb_store(instance, NULL, 1, &commands[0]);  
+lcb_wait(instance);
+
+while(!warmupdone){
+ lcb_server_stats_cmd_t stats;
+ stats.version = 0;
+ stats.v.v0.name = "warmup";
+ stats.v.v0.nname = 6;
+ const lcb_server_stats_cmd_t *commandstat[1];
+ commandstat[0] = &stats;
+ lcb_server_stats(instance,NULL,1, &commandstat[0]);
+ lcb_wait(instance);
+ }
+
 }
+
 
 TEST_F(WarmupTest, AccessLogCheckTest) {
 const char inflated[] = "abc123";
